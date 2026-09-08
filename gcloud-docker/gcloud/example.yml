@@ -1,0 +1,33 @@
+---
+- name: Update servers
+  hosts: all
+  gather_facts: yes
+  become: true
+  tasks:
+    - name: Update apt cache and upgrade packages
+      ansible.builtin.apt:
+        upgrade: dist
+        autoremove: yes
+        update_cache: yes
+        cache_valid_time: 3600
+    - name: Print all available facts
+      ansible.builtin.debug:
+        var: ansible_facts["distribution"]
+    
+    - name: Install the package "fortune"
+      ansible.builtin.apt:
+        pkg: fortune
+        state: present
+
+# - name: Update servers again w/ no facts
+#   hosts: all
+#   gather_facts: no
+#   become: true
+#   tasks:
+#     - name: Update apt cache and upgrade packages
+#       ansible.builtin.apt:
+#         upgrade: dist
+#         autoremove: yes
+#         update_cache: yes
+#         cache_valid_time: 3600
+    

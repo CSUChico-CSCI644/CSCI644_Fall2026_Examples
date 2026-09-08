@@ -1,0 +1,6 @@
+ungrouped:
+  hosts:
+    35.208.78.198:
+      ansible_user: bcdixon
+      ansible_ssh_private_key_file: /app/id_rsa
+      ansible_python_interpreter: /usr/bin/python3
