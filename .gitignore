@@ -218,3 +218,4 @@ __marimo__/
 .streamlit/secrets.toml
 
 *id_rsa*
+gcloud-docker/gcloud/cins467-f22-c6c6750668f5.json
