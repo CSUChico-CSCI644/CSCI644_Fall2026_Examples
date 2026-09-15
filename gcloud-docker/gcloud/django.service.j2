@@ -1,0 +1,10 @@
+[Unit]
+Description=Unit for starting a basic Django app
+
+[Service]
+Restart=on-failure
+WorkingDirectory=/home/csci644/MinimalMicroService/Backend/chatexample/
+ExecStart=/home/csci644/MinimalMicroService/Backend/venv/bin/daphne -b 0.0.0.0 -p 8000 chatexample.asgi:application
+
+[Install]
+WantedBy=multi-user.target
