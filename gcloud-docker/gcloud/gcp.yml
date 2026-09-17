@@ -46,144 +46,150 @@
       debug:
         var: gcp_instance
     
-    # clor: host={{ gcp_instance.networkInterfaces[0].accessConfigs[0].natIP }} port=22 delay=10 timeout=60
-    
+    # Wait for the instance to be reachable
+    - name: Wait for the instance to be reachable
+      wait_for:
+        host: "{{ gcp_instance.networkInterfaces[0].accessConfigs[0].natIP }}"
+        port: 22
+        delay: 10
+        timeout: 120
+
     - name: Add host to groupname
       add_host: hostname={{ gcp_instance.networkInterfaces[0].accessConfigs[0].natIP }} groupname=new_instances
 
-# - name: Update Local Known Hosts and Update Packages on the Created Instance
-#   hosts: new_instances
-#   connection: ssh
-#   remote_user: csci644
-#   gather_facts: no
-#   vars:
-#     ansible_ssh_private_key_file: "./id_rsa"
-#     ansible_python_interpreter: "/usr/bin/python3"
-#   tasks:
-#     - name: Create ssh directory for root
-#       connection: local
-#       ansible.builtin.file:
-#         path: "/root/.ssh"
-#         state: directory
-#         mode: '0755'
-#     - name: Get new instance host key 
-#       connection: local
-#       ansible.builtin.shell: "ssh-keyscan -H {{ inventory_hostname }}"
-#       register: ssh_keyscan_output
-#     - name: Create known_hosts file for root if it doesn't exist
-#       connection: local
-#       ansible.builtin.file:
-#         path: "/root/.ssh/known_hosts"
-#         state: touch
-#         mode: '0644'
-#     - name: Add the host key to root's known_hosts
-#       connection: local
-#       ansible.builtin.lineinfile: 
-#         path: "/root/.ssh/known_hosts"
-#         line: "{{ ssh_keyscan_output.stdout }}"
-#         state: present
-#     - name: Update all packages to the latest version
-#       become: yes
-#       apt:
-#         upgrade: yes
-#         update_cache: yes
-#         cache_valid_time: 3600
+- name: Update Local Known Hosts and Update Packages on the Created Instance
+  hosts: new_instances
+  connection: ssh
+  remote_user: csci644
+  gather_facts: no
+  vars:
+    ansible_ssh_private_key_file: "./id_rsa"
+    ansible_python_interpreter: "/usr/bin/python3"
+  tasks:
+    - name: Create ssh directory for root
+      connection: local
+      ansible.builtin.file:
+        path: "/root/.ssh"
+        state: directory
+        mode: '0755'
+    - name: Get new instance host key 
+      connection: local
+      ansible.builtin.shell: "ssh-keyscan -H {{ inventory_hostname }}"
+      register: ssh_keyscan_output
+    - name: Create known_hosts file for root if it doesn't exist
+      connection: local
+      ansible.builtin.file:
+        path: "/root/.ssh/known_hosts"
+        state: touch
+        mode: '0644'
+    - name: Add the host key to root's known_hosts
+      connection: local
+      ansible.builtin.lineinfile: 
+        path: "/root/.ssh/known_hosts"
+        line: "{{ ssh_keyscan_output.stdout }}"
+        state: present
+    - name: Update all packages to the latest version
+      become: yes
+      apt:
+        upgrade: yes
+        update_cache: yes
+        cache_valid_time: 3600
 
-#     - name: Display the public IP address
-#       debug:
-#         msg: "The public IP address of the created instance is {{ ansible_host }}"
+    - name: Display the public IP address
+      debug:
+        msg: "The public IP address of the created instance is {{ ansible_host }}"
     
-#     - name: Display the instance details
-#       debug:
-#         var: ansible_facts
+    - name: Display the instance details
+      debug:
+        var: ansible_facts
 
-# - name: Install Postgres and Python Dependencies and get the Minimal Microservice Application Files
-#   hosts: new_instances
-#   connection: ssh
-#   remote_user: csci644
-#   gather_facts: yes
-#   vars:
-#     ansible_ssh_private_key_file: "./id_rsa"
-#     ansible_python_interpreter: "/usr/bin/python3"
-#     db_user: django
-#     db_password: django
-#     db_name: django
-#     postgres_password: postgres
-#   tasks:
-#     - name: Display the instance facts
-#       debug:
-#         var: ansible_facts
-#     - name: Install Postgres and python3.12-venv
-#       become: yes
-#       ansible.builtin.apt:
-#         name:
-#           - postgresql
-#           - python3.12-venv
-#         state: present
-#         update_cache: yes
-#         cache_valid_time: 3600
-#     - name: Delete existing MinimalMicroService directory if it exists
-#       ansible.builtin.file:
-#         path: /home/csci644/MinimalMicroService
-#         state: absent
-#     - name: Clone the minimal microservice application repository
-#       ansible.builtin.git:
-#         repo: https://github.com/CSUChico-CSCI644/MinimalMicroService.git
-#         dest: /home/csci644/MinimalMicroService
-#         single_branch: yes
-#         version: main
-#     - name: Change the permissions and ownership of the MinimalMicroService directory
-#       ansible.builtin.file:
-#         path: /home/csci644/MinimalMicroService
-#         owner: csci644
-#         group: csci644
-#         recurse: true
-#     - name: Install Dependencies for MinimalMicroService Backend into Virtual Environment
-#       ansible.builtin.pip:
-#         requirements: /home/csci644/MinimalMicroService/Backend/requirements.txt
-#         virtualenv: /home/csci644/MinimalMicroService/Backend/venv
-#         virtualenv_command: python3.12 -m venv
-#     - name: add Static Root to Settings.py
-#       ansible.builtin.lineinfile:
-#         path: /home/csci644/MinimalMicroService/Backend/chatexample/chatexample/settings.py
-#         line: "STATIC_ROOT = '/var/www/static/'"
-#         state: present
-#     - name: replace Allowed Hosts in Settings.py
-#       ansible.builtin.lineinfile:
-#         path: /home/csci644/MinimalMicroService/Backend/chatexample/chatexample/settings.py
-#         regexp: '^ALLOWED_HOSTS = .*'
-#         line: "ALLOWED_HOSTS = ['{{ ansible_ssh_host }}']"
-#     - name: Replace DB host in Settings.py
-#       ansible.builtin.lineinfile:
-#         path: /home/csci644/MinimalMicroService/Backend/chatexample/chatexample/settings.py
-#         regexp: "        'HOST': 'db',"
-#         line: "        'HOST': 'localhost',"
-#     - name: Find out if Postgres is initialized
-#       ansible.builtin.stat:
-#         path: "/var/lib/psql/data/pg_hba.conf"
-#       register: postgres_stat
-#     - name: Start and Enable Postgres if it is not initialized
-#       ansible.builtin.systemd:
-#         name: postgresql
-#         state: started
-#         enabled: yes
-#       when: not postgres_stat.stat.exists
+- name: Install Postgres and Python Dependencies and get the Minimal Microservice Application Files
+  hosts: new_instances
+  connection: ssh
+  remote_user: csci644
+  gather_facts: yes
+  vars:
+    ansible_ssh_private_key_file: "./id_rsa"
+    ansible_python_interpreter: "/usr/bin/python3"
+    db_user: django
+    db_password: django
+    db_name: django
+    postgres_password: postgres
+  tasks:
+    - name: Display the instance facts
+      debug:
+        var: ansible_facts
+    - name: Install Postgres and python3.12-venv
+      become: yes
+      ansible.builtin.apt:
+        name:
+          - postgresql
+          - python3.12-venv
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
+    - name: Delete existing MinimalMicroService directory if it exists
+      ansible.builtin.file:
+        path: /home/csci644/MinimalMicroService
+        state: absent
+    - name: Clone the minimal microservice application repository
+      ansible.builtin.git:
+        repo: https://github.com/CSUChico-CSCI644/MinimalMicroService.git
+        dest: /home/csci644/MinimalMicroService
+        single_branch: yes
+        version: main
+    - name: Change the permissions and ownership of the MinimalMicroService directory
+      ansible.builtin.file:
+        path: /home/csci644/MinimalMicroService
+        owner: csci644
+        group: csci644
+        recurse: true
+    - name: Install Dependencies for MinimalMicroService Backend into Virtual Environment
+      ansible.builtin.pip:
+        requirements: /home/csci644/MinimalMicroService/Backend/requirements.txt
+        virtualenv: /home/csci644/MinimalMicroService/Backend/venv
+        virtualenv_command: python3.12 -m venv
+    - name: add Static Root to Settings.py
+      ansible.builtin.lineinfile:
+        path: /home/csci644/MinimalMicroService/Backend/chatexample/chatexample/settings.py
+        line: "STATIC_ROOT = '/var/www/static/'"
+        state: present
+    - name: replace Allowed Hosts in Settings.py
+      ansible.builtin.lineinfile:
+        path: /home/csci644/MinimalMicroService/Backend/chatexample/chatexample/settings.py
+        regexp: '^ALLOWED_HOSTS = .*'
+        line: "ALLOWED_HOSTS = ['{{ ansible_ssh_host }}']"
+    - name: Replace DB host in Settings.py
+      ansible.builtin.lineinfile:
+        path: /home/csci644/MinimalMicroService/Backend/chatexample/chatexample/settings.py
+        regexp: "        'HOST': 'db',"
+        line: "        'HOST': 'localhost',"
+    - name: Find out if Postgres is initialized
+      ansible.builtin.stat:
+        path: "/var/lib/psql/data/pg_hba.conf"
+      register: postgres_stat
+    - name: Start and Enable Postgres if it is not initialized
+      ansible.builtin.systemd:
+        name: postgresql
+        state: started
+        enabled: yes
+      when: not postgres_stat.stat.exists
     
-#     ##HACKED solution to init postgres
-#     - name: Set password for the default postgres user
-#       ansible.builtin.shell:
-#         cmd: "sudo -u postgres psql -c \"ALTER USER postgres PASSWORD '{{ postgres_password }}';\""
-#       when: postgres_stat.stat.exists == False
+    ##HACKED solution to init postgres
+    - name: Set password for the default postgres user
+      ansible.builtin.shell:
+        cmd: "sudo -u postgres psql -c \"ALTER USER postgres PASSWORD '{{ postgres_password }}';\""
+      when: postgres_stat.stat.exists == False
 
-#     - name: Create new user
-#       ignore_errors: yes
-#       ansible.builtin.shell:
-#         cmd: "sudo -u postgres psql -c \"CREATE USER {{ db_user }} WITH PASSWORD '{{ db_password }}';\""
+    - name: Create new user
+      ignore_errors: yes
+      ansible.builtin.shell:
+        cmd: "sudo -u postgres psql -c \"CREATE USER {{ db_user }} WITH PASSWORD '{{ db_password }}';\""
 
-#     - name: Create new database
-#       ignore_errors: yes
-#       ansible.builtin.shell:
-#         cmd: "sudo -u postgres psql -c \"CREATE DATABASE {{ db_name }} OWNER {{ db_user }};\""
+    - name: Create new database
+      ignore_errors: yes
+      ansible.builtin.shell:
+        cmd: "sudo -u postgres psql -c \"CREATE DATABASE {{ db_name }} OWNER {{ db_user }};\""
 
 
     ##Keep commented out for now, as the above shell commands are a workaround for the issue with the community.postgresql module not working properly in this environment.
