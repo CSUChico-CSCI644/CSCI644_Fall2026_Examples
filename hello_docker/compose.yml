@@ -1,0 +1,18 @@
+services:
+  hello:
+    build: .
+    volumes:
+      - .:/app
+    working_dir: /app
+    ports:
+      - "8000:8000"
+    command: python3 hello.py
+  
+  webserver:
+    image: nginx:latest
+    restart: always
+    depends_on:
+      - hello
+    ports:
+      - "8080:80"
+    
