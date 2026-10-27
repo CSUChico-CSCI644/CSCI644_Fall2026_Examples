@@ -1,0 +1,8 @@
+FROM python:3.14
+ENV PYTHONUNBUFFERED 1
+RUN mkdir /app
+WORKDIR /app
+ADD . /app/
+RUN pip install -r requirements.txt
+WORKDIR /app/chatexample
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

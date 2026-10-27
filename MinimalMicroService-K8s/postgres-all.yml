@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+type: Opaque
+data:
+  POSTGRES_USER: ZGphbmdv  # base64 encoded value of "django"
+  POSTGRES_PASSWORD: ZGphbmdv  # base64 encoded value of "django"
+  POSTGRES_DB: ZGphbmdv # base64 encoded value of "django"
+  #other secrets can be added here as needed
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  labels:
+    app: postgres
+data:
+  POSTGRES_USER: django
+  POSTGRES_PASSWORD: django
+  POSTGRES_DB: django
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18
+          ports:
+            - containerPort: 5432
+          # env:
+          #   # - name: POSTGRES_USER
+          #   #   valueFrom:
+          #   #     secretKeyRef:
+          #   #       name: postgres-secret
+          #   #       key: POSTGRES_USER
+          #   # - name: POSTGRES_PASSWORD
+          #   #   valueFrom:
+          #   #     secretKeyRef:
+          #   #       name: postgres-secret
+          #   #       key: POSTGRES_PASSWORD
+          #   # - name: POSTGRES_DB
+          #   #   valueFrom:
+          #   #     secretKeyRef:
+          #   #       name: postgres-secret
+          #   #       key: POSTGRES_DB
+          #   - name: POSTGRES_USER
+          #     value: django
+          #   - name: POSTGRES_PASSWORD
+          #     value: django
+          #   - name: POSTGRES_DB
+          #     value: django
+          #How we should do it
+          envFrom:
+            - secretRef:
+                name: postgres-secret
+            # - configMapRef:
+            #     name: postgres-config
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP
