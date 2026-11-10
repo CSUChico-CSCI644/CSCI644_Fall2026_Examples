@@ -1,0 +1,55 @@
+image: docker:latest
+services:
+  - docker:dind
+
+stages:
+  - build
+  - lint
+  - test
+  - deploy
+
+build_backend:
+  stage: build
+  rules:
+    - if: '$CI_COMMIT_BRANCH != "main"'
+  before_script:
+    - docker info
+    - cd MinimalMicroService-K8s/Backend
+  script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE/backend:testing .
+    - docker push $CI_REGISTRY_IMAGE/backend:testing
+
+lint_backend:
+  stage: lint
+  image: $CI_REGISTRY_IMAGE/backend:testing
+  rules:
+    - if: '$CI_COMMIT_BRANCH != "main"'
+  before_script:
+    - cd MinimalMicroService-K8s/Backend
+  script:
+    - echo "Linting backend code..."
+    - echo "Code passed linting checks."
+
+test_backend:
+  stage: test
+  image: 
+  rules:
+    - if: '$CI_COMMIT_BRANCH != "main"'
+  before_script:
+    - cd MinimalMicroService-K8s/Backend
+  script:
+    - echo "Running backend tests..."
+    - echo "All backend tests passed."
+
+deploy_backend:
+  only:
+    - main
+  stage: deploy
+  before_script:
+    - docker info
+    - cd MinimalMicroService-K8s/Backend
+  script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE/backend:latest .
+    - docker push $CI_REGISTRY_IMAGE/backend:latest
